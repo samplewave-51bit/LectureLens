@@ -1,11 +1,9 @@
 """Document ingestion and extraction pipelines using PyMuPDF and python-pptx with OCR fallback."""
 import io
-import os
 import re
 import logging
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Union
 from pathlib import Path
-from PIL import Image
 
 import pymupdf  # PyMuPDF 2.0+
 from pptx import Presentation
@@ -73,6 +71,8 @@ class LectureParser:
             
             # 1. Try native text extraction
             text = page.get_text("text")
+            if not isinstance(text, str):
+                text = str(text)
             cleaned_text = clean_lecture_text(text)
             
             # Detect slide title (usually top block)
@@ -136,7 +136,8 @@ class LectureParser:
 
             # 1. Slide Title
             if slide.shapes.title and slide.shapes.title.has_text_frame:
-                slide_title = slide.shapes.title.text_frame.text.strip()
+                title_frame = getattr(slide.shapes.title, "text_frame", None)
+                slide_title = title_frame.text.strip() if title_frame is not None else ""
                 if slide_title:
                     slide_text_elements.append(f"Title: {slide_title}")
 
@@ -144,14 +145,18 @@ class LectureParser:
             for shape in slide.shapes:
                 # Text frames
                 if shape.has_text_frame and shape != slide.shapes.title:
-                    shape_text = shape.text_frame.text.strip()
+                    text_frame = getattr(shape, "text_frame", None)
+                    shape_text = text_frame.text.strip() if text_frame is not None else ""
                     if shape_text:
                         slide_text_elements.append(shape_text)
                 
                 # Tables
                 elif shape.has_table:
                     table_rows = []
-                    for row in shape.table.rows:
+                    table = getattr(shape, "table", None)
+                    if table is None:
+                        continue
+                    for row in table.rows:
                         row_cells = [cell.text.strip().replace('\n', ' ') for cell in row.cells]
                         table_rows.append(" | ".join(row_cells))
                     if table_rows:
@@ -160,7 +165,9 @@ class LectureParser:
                 # Extract image for OCR if shape is an image
                 elif shape.shape_type == MSO_SHAPE_TYPE.PICTURE and hasattr(shape, "image"):
                     try:
-                        image_blobs.append(shape.image.blob)
+                        image = getattr(shape, "image", None)
+                        if image is not None:
+                            image_blobs.append(image.blob)
                     except Exception:
                         pass
 

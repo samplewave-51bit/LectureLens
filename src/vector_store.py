@@ -2,10 +2,9 @@
 import os
 import json
 import logging
-from typing import List, Dict, Any, Optional, Tuple, Callable
+from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 
-import numpy as np
 import transformers
 
 # Suppress HuggingFace / PyTorch weight loading progress bars and warnings permanently

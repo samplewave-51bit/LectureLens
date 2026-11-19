@@ -1,8 +1,6 @@
 """Configuration and settings for the Lecture RAG Tool."""
-import os
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import List, Dict, Any
+from dataclasses import dataclass
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"

@@ -1,12 +1,11 @@
 """LangChain RAG engine supporting LLaMA-3 (via Groq), Google Gemini, and Local LLMs."""
 import os
 import logging
-from typing import List, Dict, Any, Optional, Tuple, Generator
-from dataclasses import dataclass
+from typing import List, Dict, Any, Optional, Tuple
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
+from pydantic import SecretStr
 
 from src.vector_store import LectureVectorStore
 from src.config import RAGSettings
@@ -132,8 +131,8 @@ class RAGEngine:
             try:
                 from langchain_groq import ChatGroq
                 return ChatGroq(
-                    api_key=groq_key,
-                    model_name=self.settings.llm_model,
+                    api_key=SecretStr(groq_key),
+                    model=self.settings.llm_model,
                     temperature=self.settings.temperature,
                     max_tokens=2048
                 )
@@ -220,8 +219,8 @@ class RAGEngine:
                         logger.info(f"Attempting fallback to verified model: {candidate}")
                         from langchain_groq import ChatGroq
                         fallback_llm = ChatGroq(
-                            api_key=groq_key,
-                            model_name=candidate,
+                            api_key=SecretStr(groq_key),
+                            model=candidate,
                             temperature=self.settings.temperature,
                             max_tokens=2048
                         )

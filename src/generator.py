@@ -1,11 +1,10 @@
 """Generators for educational study aids: Summaries, FAQs, Key Concepts, and Practice Problems."""
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.documents import Document
 
 from src.rag_engine import RAGEngine
-from src.vector_store import LectureVectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +79,11 @@ class EducationalContentGenerator:
         self.rag_engine = rag_engine
         self.vector_store = rag_engine.vector_store
 
+    @staticmethod
+    def _response_text(response: object) -> str:
+        content = getattr(response, "content", None)
+        return content if isinstance(content, str) else str(content if content is not None else response)
+
     def _collect_representative_context(
         self,
         focus_topic: str = "",
@@ -103,7 +107,7 @@ class EducationalContentGenerator:
                 k=max(3, max_chunks // len(queries)),
                 filter_doc_names=filter_doc_names
             )
-            for doc, score in results:
+            for doc, _ in results:
                 chunk_id = doc.metadata.get("chunk_id", doc.page_content[:50])
                 if chunk_id not in collected_docs:
                     collected_docs[chunk_id] = doc
@@ -122,7 +126,7 @@ class EducationalContentGenerator:
             SystemMessage(content="You are an expert academic curriculum designer."),
             HumanMessage(content=prompt)
         ])
-        return response.content if hasattr(response, "content") else str(response)
+        return self._response_text(response)
 
     def generate_faqs(self, focus_topic: str = "", filter_doc_names: Optional[List[str]] = None) -> str:
         """Generate lecture FAQs."""
@@ -132,7 +136,7 @@ class EducationalContentGenerator:
             SystemMessage(content="You are a university exam designer and academic tutor."),
             HumanMessage(content=prompt)
         ])
-        return response.content if hasattr(response, "content") else str(response)
+        return self._response_text(response)
 
     def generate_key_concepts(self, focus_topic: str = "", filter_doc_names: Optional[List[str]] = None) -> str:
         """Generate Key Concepts & Glossary."""
@@ -142,7 +146,7 @@ class EducationalContentGenerator:
             SystemMessage(content="You are an educational knowledge graph engineer."),
             HumanMessage(content=prompt)
         ])
-        return response.content if hasattr(response, "content") else str(response)
+        return self._response_text(response)
 
     def generate_practice_problems(self, focus_topic: str = "", filter_doc_names: Optional[List[str]] = None) -> str:
         """Generate exam practice problems (MCQs & analytical questions)."""
@@ -152,4 +156,4 @@ class EducationalContentGenerator:
             SystemMessage(content="You are a senior university professor writing exam questions."),
             HumanMessage(content=prompt)
         ])
-        return response.content if hasattr(response, "content") else str(response)
+        return self._response_text(response)

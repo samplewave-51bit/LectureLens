@@ -1,23 +1,44 @@
 """Utilities for sample data creation, metrics, and document exporting."""
-import os
-import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Dict, List
 from datetime import datetime
 
 import pymupdf
 from pptx import Presentation
-from pptx.util import Inches, Pt
 
 from src.config import SAMPLE_DIR
 
 def format_file_size(size_bytes: int) -> str:
     """Format bytes into readable string."""
+    size = float(size_bytes)
     for unit in ['B', 'KB', 'MB', 'GB']:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f} TB"
+        if size < 1024.0:
+            return f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
+
+
+def _set_shape_text(shape: object, text: str) -> None:
+    text_frame = getattr(shape, "text_frame", None)
+    if text_frame is None:
+        raise ValueError("The selected PowerPoint shape does not contain a text frame.")
+    text_frame.text = text
+
+
+def _add_paragraph(text_frame: object, text: str) -> None:
+    paragraph = getattr(text_frame, "add_paragraph")()
+    if paragraph is None:
+        raise ValueError("The PowerPoint text frame could not create a paragraph.")
+    setattr(paragraph, "text", text)
+
+
+def _set_notes_text(slide: object, text: str) -> None:
+    notes_slide = getattr(slide, "notes_slide", None)
+    notes_frame = getattr(notes_slide, "notes_text_frame", None)
+    if notes_frame is None:
+        raise ValueError("The PowerPoint slide does not contain a notes text frame.")
+    notes_frame.text = text
+
 
 def generate_sample_materials() -> Dict[str, Path]:
     """Generate realistic sample lecture materials (PDF and PPTX) for immediate testing."""
@@ -104,55 +125,49 @@ def generate_sample_materials() -> Dict[str, Path]:
         # Slide 1: Title Slide
         slide_layout_title = prs.slide_layouts[0]
         s1 = prs.slides.add_slide(slide_layout_title)
-        s1.shapes.title.text = "CS301: Lecture 05 - Transformers & Self-Attention"
-        s1.placeholders[1].text = "From Recurrent Architectures to the Transformer\nInstructor: Prof. Elena Vance"
+        _set_shape_text(s1.shapes.title, "CS301: Lecture 05 - Transformers & Self-Attention")
+        _set_shape_text(s1.placeholders[1], "From Recurrent Architectures to the Transformer\nInstructor: Prof. Elena Vance")
 
         # Slide 2: Limitations of RNNs
         slide_layout_bullets = prs.slide_layouts[1]
         s2 = prs.slides.add_slide(slide_layout_bullets)
-        s2.shapes.title.text = "Slide 2: Bottlenecks of RNNs & LSTMs"
-        tf2 = s2.placeholders[1].text_frame
+        _set_shape_text(s2.shapes.title, "Slide 2: Bottlenecks of RNNs & LSTMs")
+        tf2 = getattr(s2.placeholders[1], "text_frame", None)
+        if tf2 is None:
+            raise ValueError("The RNN slide layout is missing its body text frame.")
         tf2.text = "Sequential Processing Constraint:"
-        p = tf2.add_paragraph()
-        p.text = "- RNNs process tokens sequentially step-by-step: h_t = f(h_t-1, x_t)"
-        p = tf2.add_paragraph()
-        p.text = "- Sequential dependency prohibits GPU hardware parallelization during training"
-        p = tf2.add_paragraph()
-        p.text = "- Information bottleneck: Long-term memory degrades over long sequences (> 50-100 steps)"
-        p = tf2.add_paragraph()
-        p.text = "- Solution: Attention Mechanism allows direct token-to-token connections!"
+        _add_paragraph(tf2, "- RNNs process tokens sequentially step-by-step: h_t = f(h_t-1, x_t)")
+        _add_paragraph(tf2, "- Sequential dependency prohibits GPU hardware parallelization during training")
+        _add_paragraph(tf2, "- Information bottleneck: Long-term memory degrades over long sequences (> 50-100 steps)")
+        _add_paragraph(tf2, "- Solution: Attention Mechanism allows direct token-to-token connections!")
         if s2.has_notes_slide:
-            s2.notes_slide.notes_text_frame.text = "Emphasize that parallel training on GPUs was the primary catalyst for the Transformer revolution."
+            _set_notes_text(s2, "Emphasize that parallel training on GPUs was the primary catalyst for the Transformer revolution.")
 
         # Slide 3: Scaled Dot-Product Attention
         s3 = prs.slides.add_slide(slide_layout_bullets)
-        s3.shapes.title.text = "Slide 3: Scaled Dot-Product Attention Formula"
-        tf3 = s3.placeholders[1].text_frame
+        _set_shape_text(s3.shapes.title, "Slide 3: Scaled Dot-Product Attention Formula")
+        tf3 = getattr(s3.placeholders[1], "text_frame", None)
+        if tf3 is None:
+            raise ValueError("The attention slide layout is missing its body text frame.")
         tf3.text = "Attention Formulation (Vaswani et al. 2017):"
-        p = tf3.add_paragraph()
-        p.text = "Attention(Q, K, V) = softmax((Q * K^T) / sqrt(d_k)) * V"
-        p = tf3.add_paragraph()
-        p.text = "- Q (Queries): Projections of input tokens looking for information"
-        p = tf3.add_paragraph()
-        p.text = "- K (Keys): Projections of tokens indicating what content they hold"
-        p = tf3.add_paragraph()
-        p.text = "- V (Values): The actual information representation to aggregate"
-        p = tf3.add_paragraph()
-        p.text = "- Scaling factor 1 / sqrt(d_k): Prevents large dot-products from pushing softmax into regions with tiny vanishing gradients!"
+        _add_paragraph(tf3, "Attention(Q, K, V) = softmax((Q * K^T) / sqrt(d_k)) * V")
+        _add_paragraph(tf3, "- Q (Queries): Projections of input tokens looking for information")
+        _add_paragraph(tf3, "- K (Keys): Projections of tokens indicating what content they hold")
+        _add_paragraph(tf3, "- V (Values): The actual information representation to aggregate")
+        _add_paragraph(tf3, "- Scaling factor 1 / sqrt(d_k): Prevents large dot-products from pushing softmax into regions with tiny vanishing gradients!")
         if s3.has_notes_slide:
-            s3.notes_slide.notes_text_frame.text = "Exam favorite question: Why divide by sqrt(d_k)? Mention the variance of dot product growing proportionally to d_k."
+            _set_notes_text(s3, "Exam favorite question: Why divide by sqrt(d_k)? Mention the variance of dot product growing proportionally to d_k.")
 
         # Slide 4: Multi-Head Attention & Positional Encoding
         s4 = prs.slides.add_slide(slide_layout_bullets)
-        s4.shapes.title.text = "Slide 4: Multi-Head Attention & Positional Encoding"
-        tf4 = s4.placeholders[1].text_frame
+        _set_shape_text(s4.shapes.title, "Slide 4: Multi-Head Attention & Positional Encoding")
+        tf4 = getattr(s4.placeholders[1], "text_frame", None)
+        if tf4 is None:
+            raise ValueError("The multi-head attention slide layout is missing its body text frame.")
         tf4.text = "Key Components of Transformer Architecture:"
-        p = tf4.add_paragraph()
-        p.text = "1. Multi-Head Attention: Projects Q, K, V into h different subspaces, allowing the model to attend to different aspects (e.g. grammar, tense, semantics) simultaneously."
-        p = tf4.add_paragraph()
-        p.text = "2. Positional Encoding: Because self-attention is permutation-invariant, positional sinusoidal encodings PE(pos, 2i) = sin(pos / 10000^(2i/d)) are added to token embeddings."
-        p = tf4.add_paragraph()
-        p.text = "3. Layer Normalization & Residual Connections: y = LayerNorm(x + Sublayer(x)) enables stable gradient flow through hundreds of layers."
+        _add_paragraph(tf4, "1. Multi-Head Attention: Projects Q, K, V into h different subspaces, allowing the model to attend to different aspects (e.g. grammar, tense, semantics) simultaneously.")
+        _add_paragraph(tf4, "2. Positional Encoding: Because self-attention is permutation-invariant, positional sinusoidal encodings PE(pos, 2i) = sin(pos / 10000^(2i/d)) are added to token embeddings.")
+        _add_paragraph(tf4, "3. Layer Normalization & Residual Connections: y = LayerNorm(x + Sublayer(x)) enables stable gradient flow through hundreds of layers.")
 
         prs.save(str(pptx_path))
 

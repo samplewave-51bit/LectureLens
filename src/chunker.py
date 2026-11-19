@@ -1,6 +1,6 @@
 """Semantic chunking pipeline tailored for lecture slides and academic PDFs."""
 import logging
-from typing import List, Dict, Any
+from typing import List
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 

@@ -1,7 +1,7 @@
 """OCR Engine for extracting text from scanned slides, diagrams, and images."""
 import io
 import logging
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, Union
 from PIL import Image
 import numpy as np
 
@@ -43,7 +43,7 @@ class OCREngine:
         extracted_lines = []
         if self._rapid_ocr is not None:
             try:
-                ocr_result, elapse = self._rapid_ocr(img_np)
+                ocr_result, _ = self._rapid_ocr(img_np)
                 if ocr_result:
                     # Sort results by vertical position (y coordinate) then horizontal (x coordinate)
                     # ocr_result item format: [box_coordinates, text, confidence]
